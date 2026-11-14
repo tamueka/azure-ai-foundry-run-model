@@ -1,5 +1,8 @@
 # run-model — CLI de Azure AI Foundry
 
+[![Repositorio](https://img.shields.io/badge/GitHub-azure--ai--foundry--run--model-181717?logo=github)](https://github.com/tamueka/azure-ai-foundry-run-model)
+[![Release](https://img.shields.io/badge/release-v0.1.0-blue)](https://github.com/tamueka/azure-ai-foundry-run-model/releases/tag/v0.1.0)
+
 CLI de terminal que envía un prompt a un deployment de **Azure AI Foundry**
 (`gpt-5-mini`) y muestra la respuesta en streaming. Proyecto del curso de IA de
 Microsoft, construido con **Spec-Driven Development (SDD)**, arquitectura
@@ -312,6 +315,8 @@ Más detalle en [`INSTRUCTIONS.md` §8](INSTRUCTIONS.md#8-problemas-comunes).
 
 | Campo | Valor |
 |---|---|
+| Repositorio | [tamueka/azure-ai-foundry-run-model](https://github.com/tamueka/azure-ai-foundry-run-model) |
+| Release | [v0.1.0](https://github.com/tamueka/azure-ai-foundry-run-model/releases/tag/v0.1.0) |
 | Spec | [001 — CLI `run-model`](specs/001-run-model-cli/spec.md) |
 | Estado | **Implementada** (v1.1) |
 | Tests | **52/52** |

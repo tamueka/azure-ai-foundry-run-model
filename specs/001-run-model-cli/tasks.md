@@ -158,6 +158,17 @@ Leyenda: `[ ]` pendiente · `[x]` hecho
 
 ---
 
+## Fase 7 — Publicación
+
+- [x] **T20. Repositorio y primera release**
+  - `main` con el proyecto completo (41 archivos; `.env` fuera del índice)
+  - Repositorio público: <https://github.com/tamueka/azure-ai-foundry-run-model>
+  - Tag y release `v0.1.0`
+  - **Verificado**: `git status` limpio y `.env.example` es el único `.env*`
+    versionado
+
+---
+
 ## Incidencias encontradas durante la implementación
 
 | # | Hallazgo | Resolución |
