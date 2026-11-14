@@ -68,6 +68,19 @@ Añadir un **REPL interactivo** que:
 | R8 | Could | `--json` emite **NDJSON**: exactamente un documento por turno en `stdout` | Uso en scripts |
 | R9 | Must | Cada entrada se valida como prompt: recorte de extremos, 1..8000 caracteres; una entrada inválida no genera petición | Coherencia con 001 |
 
+### 4.1 Superficie de invocación
+
+| Invocación | Efecto |
+|---|---|
+| `npm run chat` | Inicia el REPL con `--effort medium` |
+| `.\run.ps1 --chat` | Inicia el REPL y permite añadir flags |
+| `.\run.ps1 --chat --effort low` | Aplica `low` a todos los turnos |
+| `.\run.ps1 --chat --verbose` | Eventos crudos por turno en `stderr` |
+| `.\run.ps1 --chat --json` | NDJSON por turno en `stdout` |
+
+`npm run chat -- --json` no es válido con npm 12, que valida los flags incluso
+después de `--`; para combinar flags se usa `.\run.ps1 --chat ...`.
+
 ---
 
 ## 5. Criterios de aceptación
