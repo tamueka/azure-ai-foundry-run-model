@@ -1,0 +1,31 @@
+# Dependencias
+node_modules/
+
+# Salida de compilación
+dist/
+*.tsbuildinfo
+
+# Cobertura
+coverage/
+
+# Entorno Python
+.venv/
+__pycache__/
+*.py[cod]
+
+# Configuración local (nunca se versiona)
+.env
+.env.*
+!.env.example
+
+# Artefactos de pruebas manuales
+out.json
+err.txt
+help.txt
+*.log
+
+# Sistema operativo y editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

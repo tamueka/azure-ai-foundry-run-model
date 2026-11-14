@@ -1,0 +1,30 @@
+{
+  "name": "ai-foundry-sample",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node --env-file=.env --import tsx src/infrastructure/cli/main.ts",
+    "dev:json": "node --env-file=.env --import tsx src/infrastructure/cli/main.ts --json",
+    "dev:verbose": "node --env-file=.env --import tsx src/infrastructure/cli/main.ts --verbose",
+    "help": "node --env-file=.env --import tsx src/infrastructure/cli/main.ts --help",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node --env-file=.env dist/infrastructure/cli/main.js"
+  },
+  "dependencies": {
+    "@azure/identity": "4.13.0",
+    "openai": "6.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}

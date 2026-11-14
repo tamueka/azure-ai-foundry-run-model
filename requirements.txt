@@ -1,0 +1,7 @@
+# Dependencias del smoke test de paridad (run_model.py).
+# El proyecto principal es TypeScript; esto solo sirve para comparar el mismo
+# deployment desde Python (ver INSTRUCTIONS.md §10).
+
+openai>=1.66,<3
+azure-identity>=1.20,<2
+python-dotenv>=1.0,<2
