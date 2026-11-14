@@ -12,10 +12,42 @@ import {
 import type {
   CompletionChunk,
   CompletionRequest,
+  ReasoningEffort,
   TokenUsage,
 } from "../../domain/model/CompletionChunk.js";
 import type { LlmPort, LlmStreamOptions } from "../../domain/ports/LlmPort.js";
 import type { Config } from "../config/Config.js";
+
+/** Payload que se envía a la Responses API, independiente de los tipos del SDK. */
+export interface AzureResponsePayload {
+  readonly model: string;
+  readonly input: string;
+  readonly store: boolean;
+  readonly reasoning: { readonly effort: ReasoningEffort };
+  readonly previous_response_id?: string;
+}
+
+/**
+ * Construye la petición al proveedor.
+ *
+ * `previous_response_id` solo aparece si hay un hilo; en el primer turno la
+ * clave se omite por completo.
+ */
+export function buildRequestPayload(
+  request: CompletionRequest,
+  deployment: string,
+): AzureResponsePayload {
+  const payload: AzureResponsePayload = {
+    model: deployment,
+    input: request.prompt,
+    store: request.store ?? false,
+    reasoning: { effort: request.effort ?? "medium" },
+  };
+
+  return request.previousResponseId === undefined
+    ? payload
+    : { ...payload, previous_response_id: request.previousResponseId };
+}
 
 /**
  * Adaptador de Azure AI Foundry sobre la Responses API de OpenAI.
@@ -47,12 +79,7 @@ export class AzureOpenAiAdapter implements LlmPort {
 
     try {
       const runner = this.#client.responses.stream(
-        {
-          model: this.#deployment,
-          input: request.prompt,
-          store: request.store ?? false,
-          reasoning: { effort: request.effort ?? "medium" },
-        },
+        buildRequestPayload(request, this.#deployment),
         signal === undefined ? undefined : { signal },
       );
 

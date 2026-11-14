@@ -1,9 +1,12 @@
 import { RunModelUseCase } from "../../application/RunModelUseCase.js";
+import { ChatSession } from "../../application/ChatSession.js";
 import { AppError } from "../../domain/errors.js";
 import { AzureOpenAiAdapter } from "../azure/AzureOpenAiAdapter.js";
 import { Config } from "../config/Config.js";
 import { ConsoleLogger } from "../logging/ConsoleLogger.js";
 import { USAGE, parseArgs, type CliOptions } from "./args.js";
+import { ConsoleChatIo } from "./ChatIo.js";
+import { ChatRepl } from "./ChatRepl.js";
 
 const EXIT_OK = 0;
 const EXIT_UNEXPECTED = 1;
@@ -26,8 +29,30 @@ async function run(): Promise<number> {
       return EXIT_OK;
     }
 
-    const sink = new ConsoleLogger({ verbose: cli.verbose, json: cli.json });
     const config = Config.fromEnv(process.env);
+
+    if (cli.chat) {
+      const chatOptions = cli;
+      const session = new ChatSession(new AzureOpenAiAdapter(config));
+      const io = new ConsoleChatIo();
+      const repl = new ChatRepl(
+        {
+          session,
+          io,
+          createSink: (turn) =>
+            new ConsoleLogger({
+              verbose: chatOptions.verbose,
+              json: chatOptions.json,
+              turn,
+            }),
+        },
+        { effort: chatOptions.effort, verbose: chatOptions.verbose, json: chatOptions.json },
+      );
+
+      return await repl.run();
+    }
+
+    const sink = new ConsoleLogger({ verbose: cli.verbose, json: cli.json });
     const useCase = new RunModelUseCase(new AzureOpenAiAdapter(config), sink);
 
     controller = new AbortController();

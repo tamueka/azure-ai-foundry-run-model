@@ -3,12 +3,13 @@
 | Campo | Valor |
 |---|---|
 | ID | 002-multi-turno |
-| Estado | Aprobada |
+| Estado | Implementada |
 | Versión | 1.0 |
 | Fecha | 2026-11-14 |
 | Autor | Equipo del proyecto (curso Microsoft AI) |
 | Depende de | [001 — CLI `run-model`](../001-run-model-cli/spec.md) |
-| Implementación | Pendiente — `plan.md` y `tasks.md` por escribir |
+| Implementación | `src/application/ChatSession.ts` y `src/infrastructure/cli/` — ver [`plan.md`](plan.md) |
+| Cierre | 2026-11-14 — AC-1..AC-11 verificados; registro en [`tasks.md`](tasks.md) |
 
 ---
 
@@ -251,8 +252,9 @@ compatible:
 | CLI | Nuevo comando observable `chat` y flag `--json` con semántica NDJSON |
 | Logger | Los eventos y mensajes de cada turno se etiquetan con el número de turno en `stderr` |
 
-El detalle de diseño, las alternativas y los riesgos se documentarán en
-`plan.md` antes de escribir código.
+El detalle de diseño, las alternativas y los riesgos están en [`plan.md`](plan.md).
+Los contratos normativos están en [`contracts/`](contracts/) y el registro de
+cierre en [`tasks.md`](tasks.md).
 
 ---
 
@@ -273,16 +275,16 @@ El detalle de diseño, las alternativas y los riesgos se documentarán en
 
 ## 11. Trazabilidad
 
-| Requisito | Criterio | Test previsto | Tarea |
+| Requisito | Criterio | Test | Tarea |
 |---|---|---|---|
-| R1 | AC-1, AC-4 | `ChatSession.test.ts` | Pendiente |
-| R2 | AC-1, AC-2, AC-3 | `ChatSession.test.ts` | Pendiente |
-| R3 | AC-3, AC-4 | `commands.test.ts` | Pendiente |
-| R4 | AC-6, AC-7 | `ChatSession.test.ts`, `Config.test.ts` | Pendiente |
-| R5 | AC-8 | `ChatSession.test.ts` (abort) + manual | Pendiente |
-| R6 | AC-9 | `ChatSession.test.ts`, `ConsoleLogger` | Pendiente |
-| R7 | AC-11 | suite completa | Pendiente |
-| R8 | AC-10 | `ChatSession.test.ts`, `logger` | Pendiente |
-| R9 | AC-5 | `ChatSession.test.ts`, `Prompt.test.ts` | Pendiente |
+| R1 | AC-1, AC-4 | `ChatSession.test.ts`, `ChatRepl.test.ts` | T4, T9 |
+| R2 | AC-1, AC-2, AC-3 | `ChatSession.test.ts` | T4, T10 |
+| R3 | AC-3, AC-4 | `chatCommands.test.ts`, `ChatRepl.test.ts` | T7, T11 |
+| R4 | AC-6, AC-7 | `ChatRepl.test.ts`, `Config.test.ts` | T9, T13 |
+| R5 | AC-8 | `ChatSession.test.ts` (abort) + `ChatRepl.test.ts` (prompt) + manual | T4, T11 |
+| R6 | AC-9 | `ChatSession.test.ts`, `ConsoleLogger.test.ts` | T6, T10 |
+| R7 | AC-11 | suite completa | T12 |
+| R8 | AC-10 | `ChatRepl.test.ts` | T9, T11 |
+| R9 | AC-5 | `ChatRepl.test.ts`, `Prompt.test.ts` | T9, T11 |
 
-Las tareas se numerarán en `tasks.md` después de aprobar `plan.md`.
+El detalle de cada tarea y su verificación está en [`tasks.md`](tasks.md).

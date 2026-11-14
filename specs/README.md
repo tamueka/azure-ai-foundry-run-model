@@ -44,7 +44,7 @@ specs/
 | Spec | Título | Estado |
 |---|---|---|
 | [001](001-run-model-cli/spec.md) | CLI `run-model` (hexagonal lite) | Implementada (auditada 2026-11-14) |
-| [002](002-multi-turno/spec.md) | Conversación multi-turno (`chat`) | Aprobada |
+| [002](002-multi-turno/spec.md) | Conversación multi-turno (`chat`) | Implementada (auditada 2026-11-14) |
 
 ## Reglas
 

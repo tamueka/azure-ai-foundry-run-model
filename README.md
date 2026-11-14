@@ -1,7 +1,7 @@
 # run-model — CLI de Azure AI Foundry
 
 [![Repositorio](https://img.shields.io/badge/GitHub-azure--ai--foundry--run--model-181717?logo=github)](https://github.com/tamueka/azure-ai-foundry-run-model)
-[![Release](https://img.shields.io/badge/release-v0.1.0-blue)](https://github.com/tamueka/azure-ai-foundry-run-model/releases/tag/v0.1.0)
+[![Release](https://img.shields.io/badge/release-v0.2.0-blue)](https://github.com/tamueka/azure-ai-foundry-run-model/releases/tag/v0.2.0)
 
 CLI de terminal que envía un prompt a un deployment de **Azure AI Foundry**
 (`gpt-5-mini`) y muestra la respuesta en streaming. Proyecto del curso de IA de
@@ -13,11 +13,13 @@ los ejemplos están en español.
 > paridad con Python están en [`INSTRUCTIONS.md`](INSTRUCTIONS.md).
 
 - Respuesta en streaming **sin duplicados**.
-- Eventos SSE crudos solo con `--verbose`.
-- Salida JSON limpia con `--json`, lista para scripts.
+- **Conversación multi-turno** con `previous_response_id` y estado en memoria.
+- Comandos `/ayuda`, `/limpiar` y `/salir`; `Ctrl+C` cancela solo el turno.
+- Eventos SSE crudos solo con `--verbose`, etiquetados por turno.
+- Salida JSON limpia con `--json`; **NDJSON** por turno en el chat.
 - Errores accionables y **códigos de salida estables**.
 - Autenticación con **Entra ID** (`az login`), sin API keys.
-- **52 tests offline**: sin red y sin gastar tokens.
+- **88 tests offline**: sin red y sin gastar tokens.
 
 ---
 
@@ -74,10 +76,14 @@ contiene marcadores; **no hay secretos en el repositorio**.
 | `npm run dev -- "tu prompt"` | Prompt propio (solo texto, sin flags) |
 | `npm run dev:json -- "tu prompt"` | Salida JSON para scripts |
 | `npm run dev:verbose` | Eventos SSE crudos en `stderr` |
+| `npm run chat` | **Conversación multi-turno** (REPL) |
+| `npm run chat:json` | REPL con NDJSON: una línea por turno |
+| `npm run chat:verbose` | REPL con eventos crudos etiquetados por turno |
 | `npm run help` | Ayuda y opciones |
 | `.\run.ps1 [flags] [prompt]` | **Cualquier** combinación de flags |
+| `.\run.ps1 --chat [flags]` | REPL con **cualquier** combinación de flags |
 | `npm run typecheck` | Verificación de tipos en modo `strict` |
-| `npm test` | 52 tests offline |
+| `npm test` | 88 tests offline |
 | `npm run test:watch` | Tests en modo vigilancia |
 | `npm run build` | Compila a `dist/` |
 | `npm start -- "tu prompt"` | Ejecuta la versión compilada |
@@ -117,10 +123,63 @@ npm run dev -- "explica RAG en una frase"
 
 ---
 
+## Conversación multi-turno
+
+`npm run chat` abre un REPL: cada línea es un turno y el contexto se conserva
+con `previous_response_id`, **solo en memoria**. El servidor recupera el
+contexto; el cliente solo envía el turno nuevo. Para encadenar, cada respuesta
+se almacena con `store: true`.
+
+```powershell
+npm run chat
+```
+
+| Comando | Efecto |
+|---|---|
+| `/ayuda` | Muestra los comandos en `stderr` |
+| `/limpiar` | Reinicia el hilo sin cerrar la sesión |
+| `/salir` | Cierra la sesión con código `0` |
+| `Ctrl+D` | Cierra la entrada y sale con `0` |
+| `Ctrl+C` | Cancela el turno en curso; en el prompt sale con `130` |
+
+- `--effort` se aplica a todos los turnos.
+- `--verbose` etiqueta cada evento con `[turno N]` y nunca lo imprime dos veces.
+- Un error de un turno se informa en `stderr` y **no** cierra la sesión.
+- El prompt `tú> ` y la ayuda van siempre a `stderr`; `stdout` solo lleva datos.
+
+```powershell
+# Dos turnos con continuidad
+@(
+  "Mi color favorito es el azul. Responde solo: entendido.",
+  "¿Cuál es mi color favorito? Responde solo el color.",
+  "/salir"
+) | node --env-file=.env --import tsx src/infrastructure/cli/main.ts --chat --effort low
+
+# NDJSON para scripts: exactamente una línea JSON por turno
+@("di hola", "/salir") |
+  .\run.ps1 --chat --json 1> chat.ndjson 2> chat.err
+```
+
+Con `--json`, cada turno produce una línea independiente:
+
+```json
+{"turn":1,"responseId":"resp_...","text":"...","usage":{"inputTokens":12,"outputTokens":164,"reasoningTokens":64,"totalTokens":176}}
+{"turn":2,"error":{"code":4,"message":"No existe el deployment ..."}}
+```
+
+El error de un turno no cambia el código de salida final: la sesión termina con
+`0` al salir con `/salir` o `Ctrl+D`.
+
+> `.\run.ps1` no reenvía entrada por tubería en PowerShell; para pruebas con
+> entrada redirigida usa directamente `node --env-file=.env --import tsx ...`
+> como en el ejemplo.
+
+---
+
 ## Salida JSON
 
-`--json` escribe **exactamente un** documento en `stdout`; el diagnóstico va a
-`stderr`.
+`--json` en el disparo único escribe **exactamente un** documento en `stdout`;
+en el chat escribe **una línea NDJSON por turno**. El diagnóstico va a `stderr`.
 
 ```json
 {
@@ -175,12 +234,12 @@ Hexagonal lite en tres capas, con dependencias **hacia dentro**:
 ┌──────────────────────────────────────────────┐
 │              infrastructure                  │
 │   config · azure · logging · cli             │
-│   (adaptadores y composition root)           │
+│   ChatIo · ChatRepl · composition root       │
 └──────────────────┬───────────────────────────┘
                    │ implementa / invoca
 ┌──────────────────▼───────────────────────────┐
 │              application                     │
-│   RunModelUseCase                            │
+│   RunModelUseCase · ChatSession              │
 └──────────────────┬───────────────────────────┘
                    │ depende solo de puertos
 ┌──────────────────▼───────────────────────────┐
@@ -193,7 +252,10 @@ Hexagonal lite en tres capas, con dependencias **hacia dentro**:
 - `src/domain/` no conoce `openai`, `@azure/identity` ni la consola; lo impone
   `tests/architecture/layers.test.ts`.
 - `src/application/` solo depende de los puertos `LlmPort` y `EventSink`.
+  `ChatSession` conserva el hilo; no conoce `readline` ni el SDK.
 - `src/infrastructure/cli/main.ts` es el **único composition root**.
+- `ChatRepl` y `ChatIo` viven en infraestructura: gestionan consola, comandos y
+  cancelación; el estado conversacional queda en aplicación.
 - Cambiar de proveedor = nuevo adaptador de `LlmPort`, sin tocar el dominio.
 
 ---
@@ -204,21 +266,26 @@ Hexagonal lite en tres capas, con dependencias **hacia dentro**:
 .
 ├── src/
 │   ├── domain/                 # Prompt, Completion, chunks, puertos y errores
-│   ├── application/            # RunModelUseCase
-│   └── infrastructure/         # Config, Azure, logger y CLI
+│   ├── application/            # RunModelUseCase y ChatSession
+│   └── infrastructure/         # Config, Azure, logger, REPL y CLI
 ├── tests/
 │   ├── domain/                 # Prompt y CompletionAccumulator
-│   ├── application/            # Caso de uso con FakeLlmPort
-│   ├── infrastructure/         # Config, parseArgs y mapeo de errores
+│   ├── application/            # Casos de uso con FakeLlmPort
+│   ├── infrastructure/         # Config, args, comandos, REPL y logger
 │   ├── architecture/           # Regla de dependencia del dominio
 │   ├── parity/                 # Paridad del prompt TS/Python
 │   └── fakes/                  # Dobles de prueba
 ├── specs/                      # SDD: fuente de verdad del comportamiento
-│   └── 001-run-model-cli/
-│       ├── spec.md             # QUÉ y POR QUÉ
-│       ├── plan.md             # CÓMO
-│       ├── tasks.md            # Orden de implementación verificado
-│       └── contracts/          # CLI y puerto LLM (normativos)
+│   ├── 001-run-model-cli/      # Disparo único (implementada)
+│   │   ├── spec.md             # QUÉ y POR QUÉ
+│   │   ├── plan.md             # CÓMO
+│   │   ├── tasks.md            # Orden de implementación verificado
+│   │   └── contracts/          # CLI y puerto LLM (normativos)
+│   └── 002-multi-turno/        # Conversación multi-turno (implementada)
+│       ├── spec.md
+│       ├── plan.md
+│       ├── tasks.md
+│       └── contracts/          # REPL y ChatSession (normativos)
 ├── run.ps1                     # Lanzador que reenvía flags sin interpretarlos
 ├── run_model.py                # Smoke test de paridad en Python
 ├── requirements.txt            # Dependencias del smoke test Python
@@ -242,6 +309,11 @@ Hexagonal lite en tres capas, con dependencias **hacia dentro**:
 | [`specs/001-run-model-cli/tasks.md`](specs/001-run-model-cli/tasks.md) | Tareas T1–T19 con su verificación y registro de cierre |
 | [`specs/001-run-model-cli/contracts/cli.md`](specs/001-run-model-cli/contracts/cli.md) | Contrato observable del CLI |
 | [`specs/001-run-model-cli/contracts/llm-port.md`](specs/001-run-model-cli/contracts/llm-port.md) | Contrato del puerto `LlmPort` |
+| [`specs/002-multi-turno/spec.md`](specs/002-multi-turno/spec.md) | Requisitos y AC del modo conversacional |
+| [`specs/002-multi-turno/plan.md`](specs/002-multi-turno/plan.md) | Diseño del REPL, hilo y cancelación |
+| [`specs/002-multi-turno/tasks.md`](specs/002-multi-turno/tasks.md) | Tareas T1–T15 con su verificación y cierre |
+| [`specs/002-multi-turno/contracts/chat-cli.md`](specs/002-multi-turno/contracts/chat-cli.md) | Contrato observable del REPL |
+| [`specs/002-multi-turno/contracts/chat-session.md`](specs/002-multi-turno/contracts/chat-session.md) | Contrato del hilo y del puerto LLM |
 
 La spec es la **fuente de verdad**: si el código y la documentación divergen,
 manda la spec.
@@ -252,18 +324,18 @@ manda la spec.
 
 ```powershell
 npm run typecheck     # strict, sin any implícito
-npm test              # 52 tests, 8 archivos, sin red
+npm test              # 88 tests, 13 archivos, sin red
 npm run build         # emite dist/
 ```
 
-Los tests no hacen red: el caso de uso se prueba con `FakeLlmPort`. Por eso
-`npm test` no consume tokens y funciona sin credenciales.
+Los tests no hacen red: el caso de uso se prueba con `FakeLlmPort` y el REPL con
+`MemoryChatIo`. Por eso `npm test` no consume tokens y funciona sin credenciales.
 
 | Nivel | Qué cubre |
 |---|---|
 | Dominio | `Prompt` (límites y normalización), `CompletionAccumulator` |
-| Aplicación | Texto único, defaults, `--verbose`, razonamiento oculto, abort, errores |
-| Infraestructura | `Config.fromEnv` y `parseArgs` |
+| Aplicación | Texto único, defaults, hilo, `/limpiar`, errores, abort, `--verbose` |
+| Infraestructura | `Config`, `parseArgs`, comandos, REPL, NDJSON, logger y payload |
 | Arquitectura | El dominio no importa SDKs, red ni consola |
 | Paridad | El prompt por defecto coincide en TypeScript y Python |
 
@@ -304,7 +376,9 @@ sea el mismo en TypeScript y en Python.
 | `AADSTS50020` / `AADSTS700016` | Sesión en otro tenant | `az login --tenant <tenant>` |
 | `No hay una sesión válida de Azure` (exit 3) | Token no disponible | `az logout`, `az login` |
 | `No existe el deployment ...` (exit 4) | Nombre incorrecto | Revisa `AZURE_OPENAI_DEPLOYMENT` |
-| `EUNKNOWNCONFIG` de npm | npm 12 valida flags | Usa `.\run.ps1` o `dev:json` / `dev:verbose` |
+| `EUNKNOWNCONFIG` de npm | npm 12 valida flags | Usa `.\run.ps1` o `dev:json` / `dev:verbose` / `chat:*` |
+| `El modo --chat no acepta prompt posicional` | Prompt fuera del REPL | Escribe los turnos dentro de `npm run chat` |
+| El REPL no recibe líneas por tubería en `.\run.ps1` | PowerShell no reenvía stdin | Usa directamente `node --env-file=.env --import tsx src/infrastructure/cli/main.ts --chat` |
 | `UnicodeEncodeError` en Python | Code page de Windows | Ya corregido: `run_model.py` fuerza UTF-8 |
 
 Más detalle en [`INSTRUCTIONS.md` §8](INSTRUCTIONS.md#8-problemas-comunes).
@@ -316,10 +390,10 @@ Más detalle en [`INSTRUCTIONS.md` §8](INSTRUCTIONS.md#8-problemas-comunes).
 | Campo | Valor |
 |---|---|
 | Repositorio | [tamueka/azure-ai-foundry-run-model](https://github.com/tamueka/azure-ai-foundry-run-model) |
-| Release | [v0.1.0](https://github.com/tamueka/azure-ai-foundry-run-model/releases/tag/v0.1.0) |
-| Spec | [001 — CLI `run-model`](specs/001-run-model-cli/spec.md) |
-| Estado | **Implementada** (v1.1) |
-| Tests | **52/52** |
-| Criterios manuales pendientes | AC-5 (mensaje específico de 403) y AC-7 (`Ctrl+C` → exit 130); AC-4 verificado con credencial inválida simulada |
+| Release | [v0.2.0](https://github.com/tamueka/azure-ai-foundry-run-model/releases/tag/v0.2.0) |
+| Specs | [001 — CLI `run-model`](specs/001-run-model-cli/spec.md) · [002 — Multi-turno](specs/002-multi-turno/spec.md) |
+| Estado | **Implementadas** (001 v1.1, 002 v1.0) |
+| Tests | **88/88** en 13 archivos |
+| Criterios manuales pendientes | AC-5 y AC-7 de la 001; AC-8 de la 002 (`Ctrl+C` real en terminal, cubierto por tests en lo automatizable) |
 
 Proyecto educativo del curso de IA de Microsoft.

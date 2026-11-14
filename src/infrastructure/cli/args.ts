@@ -11,14 +11,24 @@ Uso:
   npm run dev -- "tu prompt"        Prompt propio (solo texto, sin flags)
   npm run dev:json -- "tu prompt"   Salida JSON
   npm run dev:verbose               Eventos SSE crudos
+  npm run chat                      Conversación multi-turno (REPL)
+  npm run chat:json                 REPL con NDJSON
+  npm run chat:verbose              REPL con eventos crudos
   npm run help                      Esta ayuda
   ./run.ps1 [opciones] [prompt]     Cualquier combinación de flags
+  ./run.ps1 --chat [opciones]       REPL con cualquier combinación de flags
 
 Opciones:
   -v, --verbose         Muestra cada evento SSE en stderr (una sola vez)
-      --json            Emite un único objeto JSON en stdout
+      --json            Emite un objeto JSON (disparo único) o NDJSON (chat)
+      --chat            Inicia el modo conversacional; no admite prompt posicional
       --effort <nivel>  Esfuerzo de razonamiento: low | medium | high (por defecto: medium)
   -h, --help            Muestra esta ayuda
+
+Comandos del REPL:
+  /ayuda                Muestra la ayuda de comandos
+  /limpiar              Reinicia el hilo y olvida el contexto
+  /salir                Cierra la sesión
 
 Variables de entorno obligatorias:
   AZURE_OPENAI_ENDPOINT    URL base del recurso (…/openai/v1)
@@ -27,12 +37,16 @@ Variables de entorno obligatorias:
 Ejemplos:
   npm run dev -- "¿Qué es Microsoft Foundry?"
   ./run.ps1 --verbose "explica RAG en una frase"
-  ./run.ps1 --json "hola" | ConvertFrom-Json`;
+  ./run.ps1 --json "hola" | ConvertFrom-Json
+  npm run chat
+  @("mi color favorito es el azul", "¿cuál es mi color favorito?", "/salir") |
+    ./run.ps1 --chat --effort low`;
 
 export interface CliOptions {
   readonly prompt: string;
   readonly verbose: boolean;
   readonly json: boolean;
+  readonly chat: boolean;
   readonly effort: ReasoningEffort;
   readonly help: boolean;
 }
@@ -50,6 +64,7 @@ export function isReasoningEffort(value: string): value is ReasoningEffort {
 export function parseArgs(argv: readonly string[]): CliOptions {
   let verbose = false;
   let json = false;
+  let chat = false;
   let help = false;
   let effort: ReasoningEffort = "medium";
   const positional: string[] = [];
@@ -68,6 +83,9 @@ export function parseArgs(argv: readonly string[]): CliOptions {
         break;
       case "--json":
         json = true;
+        break;
+      case "--chat":
+        chat = true;
         break;
       case "-h":
       case "--help":
@@ -101,10 +119,17 @@ export function parseArgs(argv: readonly string[]): CliOptions {
     }
   }
 
+  if (chat && !help && positional.length > 0) {
+    throw new UsageError(
+      "El modo --chat no acepta prompt posicional. Escribe los turnos dentro del REPL.",
+    );
+  }
+
   return {
     prompt: positional.length === 0 ? DEFAULT_PROMPT : positional.join(" ").trim(),
     verbose,
     json,
+    chat,
     effort,
     help,
   };

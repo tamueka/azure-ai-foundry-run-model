@@ -1,6 +1,6 @@
 {
   "name": "ai-foundry-sample",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -10,6 +10,9 @@
     "dev": "node --env-file=.env --import tsx src/infrastructure/cli/main.ts",
     "dev:json": "node --env-file=.env --import tsx src/infrastructure/cli/main.ts --json",
     "dev:verbose": "node --env-file=.env --import tsx src/infrastructure/cli/main.ts --verbose",
+    "chat": "node --env-file=.env --import tsx src/infrastructure/cli/main.ts --chat",
+    "chat:json": "node --env-file=.env --import tsx src/infrastructure/cli/main.ts --chat --json",
+    "chat:verbose": "node --env-file=.env --import tsx src/infrastructure/cli/main.ts --chat --verbose",
     "help": "node --env-file=.env --import tsx src/infrastructure/cli/main.ts --help",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

@@ -5,6 +5,8 @@ export interface ConsoleLoggerOptions {
   readonly verbose?: boolean;
   /** Silencia el texto visible en `stdout` (el JSON se emite al final). */
   readonly json?: boolean;
+  /** Número de turno para prefijar el diagnóstico. Sin valor, no hay prefijo. */
+  readonly turn?: number;
 }
 
 /**
@@ -16,10 +18,12 @@ export interface ConsoleLoggerOptions {
 export class ConsoleLogger implements EventSink {
   readonly #verbose: boolean;
   readonly #json: boolean;
+  readonly #turn: number | undefined;
 
   constructor(options: ConsoleLoggerOptions = {}) {
     this.#verbose = options.verbose ?? false;
     this.#json = options.json ?? false;
+    this.#turn = options.turn;
   }
 
   text(delta: string): void {
@@ -35,7 +39,7 @@ export class ConsoleLogger implements EventSink {
       return;
     }
 
-    process.stderr.write(`${formatEvent(payload)}\n`);
+    process.stderr.write(`${this.#prefix()}${formatEvent(payload)}\n`);
   }
 
   info(message: string): void {
@@ -43,15 +47,20 @@ export class ConsoleLogger implements EventSink {
       return;
     }
 
-    process.stderr.write(`${message}\n`);
+    process.stderr.write(`${this.#prefix()}${message}\n`);
   }
 
   error(message: string, cause?: unknown): void {
-    process.stderr.write(`error: ${message}\n`);
+    process.stderr.write(`${this.#prefix()}error: ${message}\n`);
 
     if (this.#verbose && cause !== undefined) {
       process.stderr.write(`causa: ${formatCause(cause)}\n`);
     }
+  }
+
+  /** `[turno N] ` cuando el logger pertenece a un turno del REPL. */
+  #prefix(): string {
+    return this.#turn === undefined ? "" : `[turno ${this.#turn}] `;
   }
 }
 

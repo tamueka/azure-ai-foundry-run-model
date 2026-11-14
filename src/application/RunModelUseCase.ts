@@ -10,6 +10,7 @@ export interface ExecuteInput {
   readonly effort?: ReasoningEffort;
   readonly verbose?: boolean;
   readonly store?: boolean;
+  readonly previousResponseId?: string;
 }
 
 export interface ExecuteOptions {
@@ -46,6 +47,9 @@ export class RunModelUseCase {
         effort: input.effort ?? "medium",
         verbose: input.verbose ?? false,
         store: input.store ?? false,
+        ...(input.previousResponseId === undefined
+          ? {}
+          : { previousResponseId: input.previousResponseId }),
       },
       options.signal === undefined ? {} : { signal: options.signal },
     );

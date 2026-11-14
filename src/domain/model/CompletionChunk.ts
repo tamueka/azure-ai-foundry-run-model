@@ -18,6 +18,11 @@ export interface CompletionRequest {
   readonly verbose?: boolean;
   /** Si es `true`, el proveedor persiste la respuesta. Por defecto `false`. */
   readonly store?: boolean;
+  /**
+   * Identificador de la respuesta anterior para continuar un hilo.
+   * Ausente en el primer turno. Ver `specs/002-multi-turno/contracts/chat-session.md`.
+   */
+  readonly previousResponseId?: string;
 }
 
 /** Consumo de tokens de una respuesta. */

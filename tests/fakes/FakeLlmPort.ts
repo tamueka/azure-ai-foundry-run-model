@@ -14,32 +14,41 @@ export interface FakeLlmScript {
  * Implementación de `LlmPort` para tests: sin red, sin coste y determinista.
  *
  * Registra las peticiones recibidas para poder afirmar sobre lo que el caso de
- * uso pidió al puerto. Respeta `AbortSignal` (I7 del contrato).
+ * uso pidió al puerto. Acepta un guion único o una secuencia: la llamada `n`
+ * usa el guion `n`; si se agotan, reutiliza el último. Respeta `AbortSignal`
+ * (I7 del contrato).
  */
 export class FakeLlmPort implements LlmPort {
   readonly requests: CompletionRequest[] = [];
   readonly receivedOptions: Array<LlmStreamOptions | undefined> = [];
 
-  readonly #script: FakeLlmScript;
+  readonly #scripts: readonly FakeLlmScript[];
 
-  constructor(script: FakeLlmScript) {
-    this.#script = script;
+  constructor(script: FakeLlmScript | readonly FakeLlmScript[]) {
+    this.#scripts = Array.isArray(script) ? [...script] : [script];
   }
 
   async *stream(
     request: CompletionRequest,
     options?: LlmStreamOptions,
   ): AsyncIterable<CompletionChunk> {
+    const callIndex = this.requests.length;
     this.requests.push(request);
     this.receivedOptions.push(options);
 
-    for (const chunk of this.#script.chunks) {
+    const script = this.#scripts[callIndex] ?? this.#scripts[this.#scripts.length - 1];
+
+    if (script === undefined) {
+      return;
+    }
+
+    for (const chunk of script.chunks) {
       options?.signal?.throwIfAborted();
       yield chunk;
     }
 
-    if (this.#script.error !== undefined) {
-      throw this.#script.error;
+    if (script.error !== undefined) {
+      throw script.error;
     }
   }
 }

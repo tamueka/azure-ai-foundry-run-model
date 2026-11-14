@@ -74,6 +74,14 @@ describe("RunModelUseCase", () => {
     });
   });
 
+  it("propaga previousResponseId al puerto", async () => {
+    const { useCase, llm } = build({ chunks: happyChunks });
+
+    await useCase.execute({ prompt: "hola", previousResponseId: "resp_0" });
+
+    expect(llm.requests[0]?.previousResponseId).toBe("resp_0");
+  });
+
   it("reenvía los eventos raw al sink (modo verbose)", async () => {
     const { useCase, sink } = build({
       chunks: [

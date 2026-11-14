@@ -11,6 +11,7 @@ describe("parseArgs", () => {
       prompt: DEFAULT_PROMPT,
       verbose: false,
       json: false,
+      chat: false,
       effort: "medium",
       help: false,
     });
@@ -50,6 +51,21 @@ describe("parseArgs", () => {
 
   it("rechaza --effort con valor inválido", () => {
     expect(() => parseArgs(["--effort", "maximo"])).toThrow(/Valor inválido/);
+  });
+
+  it("reconoce --chat", () => {
+    expect(parseArgs(["--chat"]).chat).toBe(true);
+    expect(parseArgs(["--chat", "--json", "--verbose"]).json).toBe(true);
+    expect(parseArgs(["--chat", "--verbose"]).verbose).toBe(true);
+  });
+
+  it("rechaza un prompt posicional en modo --chat", () => {
+    expect(() => parseArgs(["--chat", "hola"])).toThrow(UsageError);
+    expect(() => parseArgs(["--chat", "hola"])).toThrow(/no acepta prompt posicional/);
+  });
+
+  it("--chat --help no exige un prompt válido", () => {
+    expect(parseArgs(["--chat", "--help", "hola"]).help).toBe(true);
   });
 
   it("rechaza flags desconocidos", () => {
